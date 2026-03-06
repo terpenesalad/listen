@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What's Spinning</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a;
+    --cream: #f0ead6;
+    --amber: #c8922a;
+    --rust: #8b3a1a;
+    --groove: #1a1a1a;
+    --label-bg: #d4c4a0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--cream);
+    font-family: 'Courier Prime', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+
+  .header {
+    position: fixed;
+    top: 28px;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(240,234,214,0.35);
+  }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 20px;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* ── RECORD ── */
+  .record-wrap {
+    position: relative;
+    width: 280px;
+    height: 280px;
+  }
+
+  .record {
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background:
+      repeating-radial-gradient(
+        circle at center,
+        #111 0px,
+        #1c1c1c 1px,
+        #111 2px,
+        #1a1a1a 3px
+      );
+    box-shadow:
+      0 0 0 2px #2a2a2a,
+      0 20px 60px rgba(0,0,0,0.9),
+      inset 0 0 30px rgba(0,0,0,0.5);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.6s ease;
+  }
+
+  .record.spinning {
+    animation: spin 2.8s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* label */
+  .label {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: var(--label-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .label-art {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    display: none;
+  }
+
+  .label-art.visible {
+    display: block;
+  }
+
+  .label-hole {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--black);
+    position: absolute;
+    z-index: 2;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.8);
+  }
+
+  .label-lines {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 6px,
+      rgba(0,0,0,0.06) 6px,
+      rgba(0,0,0,0.06) 7px
+    );
+    z-index: 1;
+  }
+
+  /* tonearm */
+  .tonearm {
+    position: absolute;
+    top: -10px;
+    right: -30px;
+    width: 90px;
+    height: 140px;
+    pointer-events: none;
+  }
+
+  .tonearm svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── INFO PANEL ── */
+  .info {
+    width: 100%;
+    text-align: center;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .song-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    line-height: 1.2;
+    color: var(--cream);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.5s ease;
+  }
+
+  .song-title.show { opacity: 1; transform: translateY(0); }
+
+  .artist {
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--amber);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 0.5s ease 0.1s;
+  }
+
+  .artist.show { opacity: 1; transform: translateY(0); }
+
+  .album {
+    font-size: 12px;
+    font-style: italic;
+    color: rgba(240,234,214,0.45);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.5s ease 0.18s;
+  }
+
+  .album.show { opacity: 1; transform: translateY(0); }
+
+  .year {
+    font-size: 11px;
+    color: rgba(240,234,214,0.3);
+    letter-spacing: 0.2em;
+    opacity: 0;
+    transition: all 0.5s ease 0.24s;
+    transform: translateY(4px);
+  }
+
+  .year.show { opacity: 1; transform: translateY(0); }
+
+  /* ── STATUS ── */
+  .status-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .status-msg {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(240,234,214,0.4);
+    min-height: 18px;
+    transition: color 0.3s;
+  }
+
+  .status-msg.active { color: var(--amber); }
+  .status-msg.error { color: var(--rust); }
+
+  /* VU meter */
+  .vu-meter {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 24px;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .vu-meter.active { opacity: 1; }
+
+  .vu-bar {
+    width: 4px;
+    background: var(--amber);
+    border-radius: 2px 2px 0 0;
+    height: 4px;
+    transition: height 0.08s ease;
+    opacity: 0.7;
+  }
+
+  /* ── BUTTON ── */
+  .listen-btn {
+    background: none;
+    border: 1px solid rgba(240,234,214,0.25);
+    color: var(--cream);
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    padding: 14px 36px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, color 0.3s;
+  }
+
+  .listen-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--amber);
+    transform: translateX(-101%);
+    transition: transform 0.3s ease;
+    z-index: -1;
+  }
+
+  .listen-btn:hover {
+    border-color: var(--amber);
+    color: var(--black);
+  }
+
+  .listen-btn:hover::before { transform: translateX(0); }
+
+  .listen-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .listen-btn:disabled::before { transform: translateX(-101%); }
+  .listen-btn:disabled { color: var(--cream); }
+
+  /* api key input */
+  .api-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .api-label {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(240,234,214,0.35);
+  }
+
+  .api-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .api-input {
+    flex: 1;
+    background: rgba(240,234,214,0.05);
+    border: 1px solid rgba(240,234,214,0.12);
+    color: var(--cream);
+    font-family: 'Courier Prime', monospace;
+    font-size: 12px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .api-input:focus { border-color: rgba(240,234,214,0.3); }
+  .api-input::placeholder { color: rgba(240,234,214,0.2); }
+
+  .api-save {
+    background: none;
+    border: 1px solid rgba(240,234,214,0.15);
+    color: rgba(240,234,214,0.5);
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 0 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .api-save:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  .api-hint {
+    font-size: 10px;
+    color: rgba(240,234,214,0.2);
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .api-hint a {
+    color: rgba(200,146,42,0.6);
+    text-decoration: none;
+  }
+
+  /* footer */
+  .footer {
+    position: fixed;
+    bottom: 20px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: rgba(240,234,214,0.15);
+    text-transform: uppercase;
+  }
+
+  /* shimmer when identifying */
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .identifying .status-msg {
+    animation: shimmer 1.2s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">What's Spinning</div>
+
+<div class="main">
+
+  <div class="record-wrap">
+    <div class="record" id="record">
+      <div class="label" id="label">
+        <div class="label-lines"></div>
+        <img class="label-art" id="labelArt" src="" alt="album art">
+        <div class="label-hole"></div>
+      </div>
+    </div>
+
+    <!-- tonearm SVG -->
+    <div class="tonearm">
+      <svg viewBox="0 0 80 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="65" cy="12" r="9" fill="#2a2a2a" stroke="#3a3a3a" stroke-width="1.5"/>
+        <circle cx="65" cy="12" r="4" fill="#1a1a1a"/>
+        <line x1="65" y1="21" x2="18" y2="115" stroke="#3a3a3a" stroke-width="3" stroke-linecap="round"/>
+        <line x1="18" y1="115" x2="8" y2="125" stroke="#3a3a3a" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="8" cy="125" r="3" fill="#555"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="song-title" id="songTitle">—</div>
+    <div class="artist" id="artist"></div>
+    <div class="album" id="album"></div>
+    <div class="year" id="year"></div>
+  </div>
+
+  <div class="status-area" id="statusArea">
+    <div class="vu-meter" id="vuMeter">
+      <div class="vu-bar" id="b1"></div>
+      <div class="vu-bar" id="b2"></div>
+      <div class="vu-bar" id="b3"></div>
+      <div class="vu-bar" id="b4"></div>
+      <div class="vu-bar" id="b5"></div>
+      <div class="vu-bar" id="b6"></div>
+      <div class="vu-bar" id="b7"></div>
+    </div>
+    <div class="status-msg" id="statusMsg">Ready to listen</div>
+    <button class="listen-btn" id="listenBtn" onclick="startListening()">⦿ Identify</button>
+  </div>
+
+  <div class="api-section">
+    <div class="api-label">AudD API Key</div>
+    <div class="api-row">
+      <input class="api-input" id="apiKeyInput" type="password" placeholder="your-audd-api-key" />
+      <button class="api-save" onclick="saveKey()">Save</button>
+    </div>
+    <div class="api-hint">
+      Free key at <a href="https://audd.io" target="_blank">audd.io</a> — 300 recognitions/month free.
+      Without a key it'll still try but may be rate-limited.
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">place near the record player</div>
+
+<script>
+  let mediaRecorder, audioCtx, analyser, animFrameId;
+  let apiKey = localStorage.getItem('audd_key') || '';
+  let isListening = false;
+
+  const bars = [document.getElementById('b1'), document.getElementById('b2'), document.getElementById('b3'),
+                document.getElementById('b4'), document.getElementById('b5'), document.getElementById('b6'),
+                document.getElementById('b7')];
+
+  // restore key
+  if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+
+  function saveKey() {
+    apiKey = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem('audd_key', apiKey);
+    setStatus('Key saved', 'active');
+    setTimeout(() => setStatus('Ready to listen', ''), 1500);
+  }
+
+  function setStatus(msg, cls = '') {
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg' + (cls ? ' ' + cls : '');
+    document.getElementById('statusArea').className = 'status-area' + (cls === 'active' ? ' identifying' : '');
+  }
+
+  function showResult(data) {
+    const record = document.getElementById('record');
+    record.classList.add('spinning');
+
+    const title = data.title || 'Unknown Track';
+    const artist = data.artist || '';
+    const album = data.album || '';
+    const year = data.release_date ? data.release_date.split('-')[0] : '';
+
+    const titleEl = document.getElementById('songTitle');
+    const artistEl = document.getElementById('artist');
+    const albumEl = document.getElementById('album');
+    const yearEl = document.getElementById('year');
+
+    // reset
+    [titleEl, artistEl, albumEl, yearEl].forEach(e => e.classList.remove('show'));
+
+    setTimeout(() => {
+      titleEl.textContent = title;
+      artistEl.textContent = artist;
+      albumEl.textContent = album ? `"${album}"` : '';
+      yearEl.textContent = year;
+
+      requestAnimationFrame(() => {
+        titleEl.classList.add('show');
+        if (artist) artistEl.classList.add('show');
+        if (album) albumEl.classList.add('show');
+        if (year) yearEl.classList.add('show');
+      });
+    }, 80);
+
+    // album art
+    const art = data.spotify?.album?.images?.[0]?.url
+              || data.apple_music?.artwork?.url?.replace('{w}x{h}', '200x200')
+              || null;
+
+    const labelArt = document.getElementById('labelArt');
+    if (art) {
+      labelArt.src = art;
+      labelArt.classList.add('visible');
+    } else {
+      labelArt.classList.remove('visible');
+    }
+  }
+
+  function clearResult() {
+    const record = document.getElementById('record');
+    record.classList.remove('spinning');
+    document.getElementById('labelArt').classList.remove('visible');
+    ['songTitle', 'artist', 'album', 'year'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('show');
+    });
+    setTimeout(() => {
+      document.getElementById('songTitle').textContent = '—';
+      document.getElementById('artist').textContent = '';
+      document.getElementById('album').textContent = '';
+      document.getElementById('year').textContent = '';
+    }, 400);
+  }
+
+  function animateVU(stream) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    const vuMeter = document.getElementById('vuMeter');
+    vuMeter.classList.add('active');
+
+    function tick() {
+      analyser.getByteFrequencyData(data);
+      const slice = Math.floor(data.length / bars.length);
+      bars.forEach((bar, i) => {
+        const val = data[i * slice + 4] / 255;
+        bar.style.height = Math.max(3, val * 22) + 'px';
+        bar.style.opacity = 0.4 + val * 0.6;
+      });
+      animFrameId = requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  function stopVU() {
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    document.getElementById('vuMeter').classList.remove('active');
+    bars.forEach(b => { b.style.height = '4px'; b.style.opacity = '0.7'; });
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  }
+
+  async function startListening() {
+    if (isListening) return;
+    isListening = true;
+
+    const btn = document.getElementById('listenBtn');
+    btn.disabled = true;
+    clearResult();
+    setStatus('Listening…', 'active');
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (e) {
+      setStatus('Microphone access denied', 'error');
+      isListening = false;
+      btn.disabled = false;
+      return;
+    }
+
+    animateVU(stream);
+
+    // Record for 5 seconds
+    const chunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      stopVU();
+      setStatus('Identifying…', 'active');
+
+      const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+      await identify(blob);
+
+      isListening = false;
+      btn.disabled = false;
+    };
+
+    mediaRecorder.start();
+    setTimeout(() => { if (mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }, 5000);
+  }
+
+  function getSupportedMimeType() {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+    return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  }
+
+  async function identify(blob) {
+    try {
+      const formData = new FormData();
+      formData.append('file', blob, 'clip.webm');
+      formData.append('return', 'spotify,apple_music,deezer');
+      if (apiKey) formData.append('api_token', apiKey);
+
+      const res = await fetch('https://api.audd.io/', { method: 'POST', body: formData });
+      const json = await res.json();
+
+      if (json.status === 'success' && json.result) {
+        showResult(json.result);
+        setStatus('Now playing', 'active');
+      } else if (json.status === 'error' && json.error?.error_code === 901) {
+        setStatus('No song detected — try again', 'error');
+        setTimeout(() => setStatus('Ready to listen'), 2500);
+      } else {
+        setStatus('Nothing recognised', 'error');
+        setTimeout(() => setStatus('Ready to listen'), 2500);
+      }
+    } catch (e) {
+      setStatus('Network error', 'error');
+      setTimeout(() => setStatus('Ready to listen'), 2500);
+    }
+  }
+</script>
+</body>
+</html>
